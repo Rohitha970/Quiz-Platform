@@ -1,0 +1,373 @@
+import tkinter as tk
+from tkinter import messagebox, simpledialog, ttk
+import json
+import os
+from random import shuffle
+
+class QuizApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Interactive Quiz Platform")
+        self.root.geometry("700x500")
+        self.root.configure(bg="#f0f4f8")
+        self.quizzes = self.load_quizzes()
+        self.current_quiz = None
+        self.current_quiz_name = None  # Store quiz name for retry
+        self.current_question = 0
+        self.score = 0
+        self.user_answers = []
+        self.selected_options = []  # Store selected options for each question
+        
+        # Initialize built-in quizzes if none exist
+        self.initialize_builtin_quizzes()
+        self.create_main_menu()
+
+    def load_quizzes(self):
+        if os.path.exists("quizzes.json"):
+            with open("quizzes.json", "r") as f:
+                return json.load(f)
+        return {}
+
+    def save_quizzes(self):
+        with open("quizzes.json", "w") as f:
+            json.dump(self.quizzes, f, indent=4)
+
+    def initialize_builtin_quizzes(self):
+        if not self.quizzes:
+            self.quizzes = {
+                "Mathematics": [
+                    {"question": "What is 2 + 2?", "options": ["3", "4", "5", "6"], "correct": 1},
+                    {"question": "What is the square root of 16?", "options": ["2", "3", "4", "5"], "correct": 2},
+                    {"question": "What is 5 × 7?", "options": ["30", "35", "40", "45"], "correct": 1},
+                    {"question": "What is the value of π (pi) approximately?", "options": ["2.14", "3.14", "4.14", "5.14"], "correct": 1},
+                    {"question": "What is 10% of 200?", "options": ["10", "20", "30", "40"], "correct": 1},
+                    {"question": "What is 12 ÷ 3?", "options": ["2", "3", "4", "6"], "correct": 2},
+                    {"question": "What is 2³?", "options": ["6", "8", "10", "12"], "correct": 1},
+                    {"question": "What is the area of a square with side 5?", "options": ["20", "25", "30", "35"], "correct": 1},
+                    {"question": "What is 15 - 7?", "options": ["6", "7", "8", "9"], "correct": 2},
+                    {"question": "What is 9 × 9?", "options": ["72", "81", "90", "99"], "correct": 1}
+                ],
+                "Politics": [
+                    {"question": "Who is the current U.S. President as of 2025?", "options": ["Joe Biden", "Donald Trump", "Kamala Harris", "Elon Musk"], "correct": 1},
+                    {"question": "What is the supreme law of the United States?", "options": ["Bill of Rights", "Declaration of Independence", "Constitution", "Federalist Papers"], "correct": 2},
+                    {"question": "How many U.S. Senators are there?", "options": ["50", "100", "150", "200"], "correct": 1},
+                    {"question": "Which country has a parliamentary system?", "options": ["United States", "United Kingdom", "China", "Russia"], "correct": 1},
+                    {"question": "What is the term length for a U.S. President?", "options": ["2 years", "4 years", "6 years", "8 years"], "correct": 1},
+                    {"question": "How many branches of the U.S. government are there?", "options": ["2", "3", "4", "5"], "correct": 1},
+                    {"question": "What is the lower house of the U.S. Congress?", "options": ["Senate", "House of Representatives", "Supreme Court", "Cabinet"], "correct": 1},
+                    {"question": "Who vetoes bills in the U.S.?", "options": ["President", "Vice President", "Speaker", "Chief Justice"], "correct": 0},
+                    {"question": "What amendment abolished slavery?", "options": ["12th", "13th", "14th", "15th"], "correct": 1},
+                    {"question": "What is the capital of the United States?", "options": ["New York", "Florida", "Washington, D.C.", "California"], "correct": 2}
+                ],
+                "Biology": [
+                    {"question": "What is the powerhouse of the cell?", "options": ["Nucleus", "Mitochondria", "Ribosome", "Golgi Apparatus"], "correct": 1},
+                    {"question": "What gas do plants absorb during photosynthesis?", "options": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], "correct": 2},
+                    {"question": "How many chromosomes do humans have?", "options": ["23", "46", "48", "52"], "correct": 1},
+                    {"question": "What is the basic unit of life?", "options": ["Atom", "Molecule", "Cell", "Tissue"], "correct": 2},
+                    {"question": "Which organ pumps blood in the human body?", "options": ["Liver", "Heart", "Lung", "Kidney"], "correct": 1},
+                    {"question": "What is DNA's shape?", "options": ["Single helix", "Double helix", "Triple helix", "Quad helix"], "correct": 1},
+                    {"question": "Which gas do humans exhale?", "options": ["Oxygen", "Carbon Dioxide", "Nitrogen", "Helium"], "correct": 1},
+                    {"question": "What is the largest organ in the human body?", "options": ["Heart", "Liver", "Skin", "Lung"], "correct": 2},
+                    {"question": "What process converts glucose to energy?", "options": ["Photosynthesis", "Respiration", "Digestion", "Fermentation"], "correct": 1},
+                    {"question": "What is the study of plants called?", "options": ["Zoology", "Botany", "Ecology", "Genetics"], "correct": 1}
+                ],
+                "Nationalism": [
+                    {"question": "Which document declared U.S. independence?", "options": ["Constitution", "Declaration of Independence", "Magna Carta", "Emancipation Proclamation"], "correct": 1},
+                    {"question": "What is the national anthem of the United States?", "options": ["Sweet Caroline", "God Bless America", "Star-Spangled Banner", "America the Beautiful"], "correct": 2},
+                    {"question": "Which war led to U.S. independence?", "options": ["Civil War", "World War I", "Revolutionary War", "War of 1812"], "correct": 2},
+                    {"question": "Who wrote the U.S. Declaration of Independence?", "options": ["George Washington", "Thomas Jefferson", "Abraham Lincoln", "Benjamin Franklin"], "correct": 1},
+                    {"question": "What year was the U.S. founded?", "options": ["1776", "1789", "1800", "1812"], "correct": 0},
+                    {"question": "How many stars are on the U.S. flag?", "options": ["48", "50", "52", "54"], "correct": 1},
+                    {"question": "What do the 13 stripes on the U.S. flag represent?", "options": ["Original colonies", "Current states", "Founding fathers", "Wars"], "correct": 0},
+                    {"question": "Who was the first U.S. President?", "options": ["Thomas Jefferson", "John Adams", "George Washington", "James Madison"], "correct": 2},
+                    {"question": "What is the U.S. national bird?", "options": ["Eagle", "Falcon", "Hawk", "Owl"], "correct": 0},
+                    {"question": "What holiday celebrates U.S. independence?", "options": ["Memorial Day", "Labor Day", "Independence Day", "Veterans Day"], "correct": 2}
+                ]
+            }
+            self.save_quizzes()
+
+    def create_main_menu(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        self.root.configure(bg="#f0f4f8")  # Reset background
+        tk.Label(self.root, text="Interactive Quiz Platform", font=("Arial", 24, "bold"), bg="#f0f4f8", fg="#2c3e50").pack(pady=30)
+        
+        style = ttk.Style()
+        style.configure("TButton", font=("Arial", 12), padding=10)
+        style.map("TButton", background=[('active', '#3498db')])
+
+        ttk.Button(self.root, text="Take Quiz", command=self.show_quiz_selection, style="TButton").pack(pady=10, fill="x", padx=50)
+        ttk.Button(self.root, text="Create Quiz", command=self.create_quiz, style="TButton").pack(pady=10, fill="x", padx=50)
+        ttk.Button(self.root, text="Exit", command=self.root.quit, style="TButton").pack(pady=10, fill="x", padx=50)
+
+    def show_quiz_selection(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        tk.Label(self.root, text="Select a Quiz", font=("Arial", 18, "bold"), bg="#f0f4f8", fg="#2c3e50").pack(pady=20)
+        
+        style = ttk.Style()
+        style.configure("Quiz.TButton", font=("Arial", 12), padding=8)
+        
+        for quiz_name in self.quizzes.keys():
+            ttk.Button(self.root, text=quiz_name, command=lambda q=quiz_name: self.start_quiz(q), style="Quiz.TButton").pack(pady=8, fill="x", padx=50)
+        ttk.Button(self.root, text="Back", command=self.create_main_menu, style="TButton").pack(pady=20, fill="x", padx=50)
+
+    def create_quiz(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        tk.Label(self.root, text="Create a New Quiz", font=("Arial", 18, "bold"), bg="#f0f4f8", fg="#2c3e50").pack(pady=20)
+        
+        tk.Label(self.root, text="Quiz Name:", font=("Arial", 12), bg="#f0f4f8").pack()
+        quiz_name_entry = tk.Entry(self.root, font=("Arial", 12))
+        quiz_name_entry.pack(pady=5, padx=50, fill="x")
+
+        questions_frame = tk.Frame(self.root, bg="#f0f4f8")
+        questions_frame.pack(pady=10, fill="both", expand=True)
+        questions = []
+
+        def add_question():
+            question_frame = tk.Frame(questions_frame, bg="#f0f4f8")
+            question_frame.pack(pady=10, fill="x", padx=20)
+            
+            tk.Label(question_frame, text="Question:", font=("Arial", 12), bg="#f0f4f8").pack(anchor="w")
+            question_entry = tk.Entry(question_frame, font=("Arial", 12))
+            question_entry.pack(fill="x", pady=2)
+            
+            options = []
+            for i in range(4):
+                tk.Label(question_frame, text=f"Option {i+1}:", font=("Arial", 12), bg="#f0f4f8").pack(anchor="w")
+                option_entry = tk.Entry(question_frame, font=("Arial", 12))
+                option_entry.pack(fill="x", pady=2)
+                options.append(option_entry)
+            
+            tk.Label(question_frame, text="Correct Option (1-4):", font=("Arial", 12), bg="#f0f4f8").pack(anchor="w")
+            correct_entry = tk.Entry(question_frame, font=("Arial", 12))
+            correct_entry.pack(fill="x", pady=2)
+            
+            questions.append((question_entry, options, correct_entry))
+
+        ttk.Button(self.root, text="Add Question", command=add_question, style="TButton").pack(pady=10, fill="x", padx=50)
+        
+        def save_quiz():
+            quiz_name = quiz_name_entry.get()
+            if not quiz_name:
+                messagebox.showerror("Error", "Quiz name is required!")
+                return
+            if quiz_name in self.quizzes:
+                messagebox.showerror("Error", "Quiz name already exists!")
+                return
+            
+            quiz_data = []
+            for q_entry, opts, correct in questions:
+                question = q_entry.get()
+                options = [opt.get() for opt in opts]
+                correct_idx = correct.get()
+                
+                if not (question and all(options) and correct_idx):
+                    messagebox.showerror("Error", "All fields must be filled!")
+                    return
+                try:
+                    correct_idx = int(correct_idx)
+                    if not 1 <= correct_idx <= 4:
+                        raise ValueError
+                except ValueError:
+                    messagebox.showerror("Error", "Correct option must be a number between 1 and 4!")
+                    return
+                
+                quiz_data.append({
+                    "question": question,
+                    "options": options,
+                    "correct": correct_idx - 1
+                })
+            
+            if not quiz_data:
+                messagebox.showerror("Error", "At least one question is required!")
+                return
+                
+            self.quizzes[quiz_name] = quiz_data
+            self.save_quizzes()
+            messagebox.showinfo("Success", "Quiz created successfully!")
+            self.create_main_menu()
+
+        ttk.Button(self.root, text="Save Quiz", command=save_quiz, style="TButton").pack(pady=10, fill="x", padx=50)
+        ttk.Button(self.root, text="Back", command=self.create_main_menu, style="TButton").pack(pady=10, fill="x", padx=50)
+
+    def start_quiz(self, quiz_name):
+        self.current_quiz_name = quiz_name
+        self.current_quiz = self.quizzes[quiz_name]
+        self.current_question = 0
+        self.score = 0
+        self.user_answers = []
+        self.selected_options = [None] * len(self.current_quiz)  # Initialize for all questions
+        shuffle(self.current_quiz)
+        self.show_question()
+
+    def show_question(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        if self.current_question >= len(self.current_quiz):
+            self.show_results()
+            return
+
+        question_data = self.current_quiz[self.current_question]
+        tk.Label(self.root, text=f"Question {self.current_question + 1}/{len(self.current_quiz)}", font=("Arial", 14, "bold"), bg="#f0f4f8", fg="#2c3e50").pack(pady=10)
+        tk.Label(self.root, text=question_data["question"], font=("Arial", 16), bg="#f0f4f8", fg="#34495e", wraplength=600).pack(pady=10)
+
+        # Initialize selected option for current question
+        if self.selected_options[self.current_question] is None:
+            self.selected_option = tk.IntVar(value=-1)
+        else:
+            self.selected_option = tk.IntVar(value=self.selected_options[self.current_question])
+
+        colors = ["#3498db", "#2ecc71", "#e67e22", "#9b59b6"]
+        
+        style = ttk.Style()
+        for i, color in enumerate(colors):
+            style.configure(f"Option{i}.TRadiobutton", font=("Arial", 12), padding=8, background="#f0f4f8")
+            style.map(f"Option{i}.TRadiobutton", background=[('active', color), ('selected', color)])
+
+        for i, option in enumerate(question_data["options"]):
+            ttk.Radiobutton(self.root, text=option, variable=self.selected_option, value=i, style=f"Option{i}.TRadiobutton").pack(anchor="w", padx=30, pady=5)
+        
+        # Navigation buttons
+        button_frame = tk.Frame(self.root, bg="#f0f4f8")
+        button_frame.pack(pady=20)
+
+        style.configure("Next.TButton", font=("Arial", 12), padding=10, background="#2ecc71")
+        style.map("Next.TButton", background=[('active', '#27ae60')])
+        
+        style.configure("Back.TButton", font=("Arial", 12), padding=10, background="#f4a261")
+        style.map("Back.TButton", background=[('active', '#e76f51')])
+
+        # Show Submit button only on the last question
+        if self.current_question == len(self.current_quiz) - 1:
+            ttk.Button(button_frame, text="Submit", command=self.submit_quiz, style="TButton").pack(side="right", padx=10)
+        else:
+            ttk.Button(button_frame, text="Next", command=self.next_question, style="Next.TButton").pack(side="right", padx=10)
+        
+        # Show Back button except on the first question
+        if self.current_question > 0:
+            ttk.Button(button_frame, text="Back", command=self.previous_question, style="Back.TButton").pack(side="left", padx=10)
+        
+        tk.Label(self.root, text=f"Score: {self.score}", font=("Arial", 12, "bold"), bg="#f0f4f8", fg="#2c3e50").pack(pady=10)
+
+    def next_question(self):
+        # Save the selected option
+        selected = self.selected_option.get()
+        if selected == -1:
+            messagebox.showwarning("Warning", "Please select an option!")
+            return
+        
+        self.selected_options[self.current_question] = selected
+        self.submit_answer()
+        self.current_question += 1
+        self.show_question()
+
+    def previous_question(self):
+        self.selected_options[self.current_question] = self.selected_option.get()
+        self.current_question -= 1
+        self.show_question()
+
+    def submit_answer(self):
+        question_data = self.current_quiz[self.current_question]
+        user_answer = self.selected_option.get()
+        
+        # Skip if already answered (when navigating back)
+        if self.current_question < len(self.user_answers):
+            return
+        
+        self.user_answers.append({
+            "question": question_data["question"],
+            "user_answer": question_data["options"][user_answer],
+            "correct_answer": question_data["options"][question_data["correct"]],
+            "correct": user_answer == question_data["correct"]
+        })
+        
+        if user_answer == question_data["correct"]:
+            self.score += 1
+
+    def submit_quiz(self):
+        # Ensure an option is selected for the last question
+        selected = self.selected_option.get()
+        if selected == -1:
+            messagebox.showwarning("Warning", "Please select an option!")
+            return
+        
+        self.selected_options[self.current_question] = selected
+        self.submit_answer()
+        self.show_results()
+
+    def show_try_again_dialog(self):
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Try Again!")
+        dialog.geometry("300x200")
+        dialog.configure(bg="#f0f4f8")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        tk.Label(dialog, text="Try Again! Let's improve that score! ↻ ⚠", font=("Arial", 14, "bold"), bg="#f0f4f8", fg="#2c3e50", wraplength=250).pack(pady=20)
+
+        button_frame = tk.Frame(dialog, bg="#f0f4f8")
+        button_frame.pack(pady=20)
+
+        style = ttk.Style()
+        style.configure("Retry.TButton", font=("Arial", 12), padding=10, background="#2ecc71")
+        style.map("Retry.TButton", background=[('active', '#27ae60')])
+        
+        style.configure("Menu.TButton", font=("Arial", 12), padding=10, background="#3498db")
+        style.map("Menu.TButton", background=[('active', '#2980b9')])
+
+        ttk.Button(button_frame, text="Retry Quiz", command=lambda: [dialog.destroy(), self.start_quiz(self.current_quiz_name)], style="Retry.TButton").pack(side="left", padx=10)
+        ttk.Button(button_frame, text="Main Menu", command=lambda: [dialog.destroy(), self.create_main_menu()], style="Menu.TButton").pack(side="right", padx=10)
+
+    def show_results(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        # Set background color and message based on score
+        if self.score == len(self.current_quiz):
+            bg_color = "#2ecc71"
+            result_message = "★ Congratulations! ★ 🏆"
+            messagebox.showinfo("Perfect Score!", "Congratulations! You Did It!")
+        elif self.score >= 8:
+            bg_color = "#3498db"
+            result_message = "↻ Try Again! ↻ ⚠"
+            self.show_try_again_dialog()
+        elif self.score < 5:
+            bg_color = "#e74c3c"
+            result_message = "↻ Try Again! ↻ ⚠"
+            self.show_try_again_dialog()
+        else:
+            bg_color = "#ecf0f1"
+            result_message = "↻ Try Again! ↻ ⚠"
+            self.show_try_again_dialog()
+
+        self.root.configure(bg=bg_color)
+        tk.Label(self.root, text="Quiz Results", font=("Arial", 18, "bold"), bg=bg_color, fg="#2c3e50").pack(pady=20)
+        tk.Label(self.root, text=result_message, font=("Arial", 16, "bold"), bg=bg_color, fg="#ffffff").pack(pady=10)
+        tk.Label(self.root, text=f"Your Score: {self.score}/{len(self.current_quiz)}", font=("Arial", 16), bg=bg_color, fg="#34495e").pack(pady=10)
+        
+        # Display only incorrectly answered questions
+        result_frame = tk.Frame(self.root, bg=bg_color)
+        result_frame.pack(pady=10, fill="both", expand=True)
+        
+        incorrect_found = False
+        for i, answer in enumerate(self.user_answers):
+            if not answer["correct"]:
+                incorrect_found = True
+                result_text = f"Q{i+1}: {answer['question']}\nYour Answer: {answer['user_answer']}\nCorrect Answer: {answer['correct_answer']}"
+                tk.Label(result_frame, text=result_text, font=("Arial", 12), bg=bg_color, fg="#ffffff", justify="left", wraplength=600).pack(pady=10, anchor="w", padx=20)
+        
+        if not incorrect_found:
+            tk.Label(result_frame, text="No incorrect answers! Perfect!", font=("Arial", 12, "italic"), bg=bg_color, fg="#ffffff").pack(pady=10, anchor="w", padx=20)
+        
+        ttk.Button(self.root, text="Back to Menu", command=self.create_main_menu, style="TButton").pack(pady=20, fill="x", padx=50)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = QuizApp(root)
+    root.mainloop()
